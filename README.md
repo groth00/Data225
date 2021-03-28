@@ -10,8 +10,10 @@ https://www.kaggle.com/yelp-dataset/yelp-dataset
 
 Finished:
 Data preprocessing/cleaning
-Business file imported into MySQL
+Business file imported into MySQL 
 
 TODO:
+
 Analysis of the business file
+
 Use NLP on the reviews file
