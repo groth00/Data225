@@ -38,6 +38,7 @@ except Error as e:
 
 try:
     with connection.cursor() as cursor:
+        cursor.execute('drop database if exists yelp')
         cursor.execute('create database if not exists yelp')
 except Error as e:
     print(e)
@@ -48,18 +49,9 @@ try:
 except Error as e:
     print(e)
     
-try:
-    with connection.cursor() as cursor:
-        cursor.execute('drop table if exists business')
-        cursor.execute('drop table if exists business_denormalized')
-        cursor.execute('drop table if exists categories')
-except Error as e:
-    print(e)
-
 create_business_table = '''
 create table if not exists business(
-id int auto_increment primary key,
-business_id char({}),
+business_id char({}) primary key,
 name varchar({}),
 address varchar({}),
 city varchar({}),
@@ -76,12 +68,14 @@ try:
         cursor.execute(create_business_table)
         connection.commit()
 except Error as e:
-    print(e)
+    print('error creating business table: ', e)
 
 create_categories_table = '''
 create table categories(
+id integer auto_increment primary key,
 business_id char({}),
-category varchar({})
+category varchar({}),
+foreign key(business_id) references business(business_id)
 )
 '''.format(widths[0], max([len(x) for x in flattened_col.categories]))
 
@@ -90,14 +84,14 @@ try:
         cursor.execute(create_categories_table)
         connection.commit()
 except Error as e:
-    print(e)
+    print('error creating categories table: ', e)
     
 # show tables
 try:
     with connection.cursor() as cursor:
         cursor.execute('show tables')
         result = cursor.fetchall()
-        print(f'tables in yelp database include: ')
+        print('tables in yelp database include: ')
         for r in result:
             print(r)
 except Error as e:
@@ -122,11 +116,20 @@ insert into categories
 (business_id, category)
 values(%s, %s)
 '''
-
-with connection.cursor() as cursor:
-    cursor.executemany(insert_into_business, business_values)
-    cursor.executemany(insert_into_categories, category_values)
-    connection.commit()
+try:
+    with connection.cursor() as cursor:
+        cursor.executemany(insert_into_business, business_values)
+        connection.commit()
+except Error as e:
+    print('error inserting values into business table: ', e)
+    
+try:
+    with connection.cursor() as cursor:
+        cursor.executemany(insert_into_categories, category_values)
+        connection.commit()
+except Error as e:
+    print('error inserting values into categories table: ', e)
+    
 
 # check that all rows were entered: 63944 and 274306
 with connection.cursor() as cursor:
@@ -179,7 +182,7 @@ fetchQuery(top_20, "top 20 businesses ranked by stars")
 bottom_20 = '''
 select * from business order by stars limit 20;
 '''
-fetchQuery(top_20, "bottom 20 businesses ranked by stars")
+fetchQuery(bottom_20, "bottom 20 businesses ranked by stars")
 
 fetchQuery("select name, address,count(*) as cnt from business group by name, address having cnt > 2 order by cnt DESC", \
             "businesses that have more than one row for the same name and address")
