@@ -97,10 +97,15 @@ try:
     with connection.cursor() as cursor:
         cursor.execute('show tables')
         result = cursor.fetchall()
+        print(f'tables in yelp database include: ')
         for r in result:
             print(r)
 except Error as e:
     print(e)
+
+################################################
+########### Load data into tables ##############
+################################################
 
 business_values = [row for row in b.itertuples(index=False, name=None)]
 category_values = [row for row in temp.itertuples(index=False, name=None)]
@@ -128,13 +133,17 @@ with connection.cursor() as cursor:
     cursor.execute('select count(*) from business')
     result = cursor.fetchall()
     for r in result:
-        print(r)
+        print(f'There are {r} rows in table: business')
         
 with connection.cursor() as cursor:
     cursor.execute('select count(*) from categories')
     result = cursor.fetchall()
     for r in result:
-        print(r)
+        print(f'There are {r} rows in table: categories')
+
+################################################
+################### Analysis ###################
+################################################
 
 # some queries
 businesses_per_state = '''
@@ -165,9 +174,4 @@ with connection.cursor() as cursor:
     for r in result:
         print(r)
 
-
-
 connection.close()
-
-
-
