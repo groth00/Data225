@@ -145,6 +145,15 @@ with connection.cursor() as cursor:
 ################### Analysis ###################
 ################################################
 
+def fetchQuery(query: str, description: str = "no description") -> None:
+    print(description)
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        for r in result:
+            print(r)
+    print()
+
 # some queries
 businesses_per_state = '''
 select state, count(*) as num_restaurants
@@ -152,15 +161,7 @@ from business
 group by state
 order by num_restaurants desc;
 '''
-with connection.cursor() as cursor:
-    cursor.execute(businesses_per_state)
-    result = cursor.fetchall()
-    for r in result:
-        print(r)
-
-''' groups businesses by category and returns avg star rating
-for group size > 50
-'''
+fetchQuery(businesses_per_state, "businesses_per_state")
 
 avg_stars_query = '''
 select category, avg(stars)
@@ -168,10 +169,6 @@ from business join categories using(business_id)
 group by category
 having count(*) > 50
 '''
-with connection.cursor() as cursor:
-    cursor.execute(avg_stars_query)
-    result = cursor.fetchall()
-    for r in result:
-        print(r)
+fetchQuery(avg_stars_query, "groups businesses by category and returns avg star rating for group size > 50")
 
 connection.close()
