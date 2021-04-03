@@ -51,7 +51,7 @@ except Error as e:
     
 create_business_table = '''
 create table if not exists business(
-business_id char({}),
+business_id char({}) primary key,
 name varchar({}),
 address varchar({}),
 city varchar({}),
@@ -60,9 +60,7 @@ postal_code varchar({}),
 latitude float(10,7),
 longitude float(10,7),
 stars float(2,1),
-review_count int,
-primary key(business_id, name)
-)
+review_count int)
 '''.format(*widths)
 
 try:
