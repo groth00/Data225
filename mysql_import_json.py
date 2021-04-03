@@ -97,10 +97,15 @@ try:
     with connection.cursor() as cursor:
         cursor.execute('show tables')
         result = cursor.fetchall()
+        print(f'tables in yelp database include: ')
         for r in result:
             print(r)
 except Error as e:
     print(e)
+
+################################################
+########### Load data into tables ##############
+################################################
 
 business_values = [row for row in b.itertuples(index=False, name=None)]
 category_values = [row for row in temp.itertuples(index=False, name=None)]
@@ -128,13 +133,26 @@ with connection.cursor() as cursor:
     cursor.execute('select count(*) from business')
     result = cursor.fetchall()
     for r in result:
-        print(r)
+        print(f'There are {r} rows in table: business')
         
 with connection.cursor() as cursor:
     cursor.execute('select count(*) from categories')
     result = cursor.fetchall()
     for r in result:
-        print(r)
+        print(f'There are {r} rows in table: categories')
+
+################################################
+################### Analysis ###################
+################################################
+
+def fetchQuery(query: str, description: str = "no description") -> None:
+    print(description)
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        for r in result:
+            print(r)
+    print()
 
 # some queries
 businesses_per_state = '''
@@ -143,15 +161,7 @@ from business
 group by state
 order by num_restaurants desc;
 '''
-with connection.cursor() as cursor:
-    cursor.execute(businesses_per_state)
-    result = cursor.fetchall()
-    for r in result:
-        print(r)
-
-''' groups businesses by category and returns avg star rating
-for group size > 50
-'''
+fetchQuery(businesses_per_state, "businesses_per_state")
 
 avg_stars_query = '''
 select category, avg(stars)
@@ -159,15 +169,25 @@ from business join categories using(business_id)
 group by category
 having count(*) > 50
 '''
-with connection.cursor() as cursor:
-    cursor.execute(avg_stars_query)
-    result = cursor.fetchall()
-    for r in result:
-        print(r)
+fetchQuery(avg_stars_query, "groups businesses by category and returns avg star rating for group size > 50")
 
+top_20 = '''
+select * from business order by stars DESC limit 20;
+'''
+fetchQuery(top_20, "top 20 businesses ranked by stars")
 
+bottom_20 = '''
+select * from business order by stars limit 20;
+'''
+fetchQuery(top_20, "bottom 20 businesses ranked by stars")
+
+fetchQuery("select name, address,count(*) as cnt from business group by name, address having cnt > 2 order by cnt DESC", \
+            "businesses that have more than one row for the same name and address")
+
+fetchQuery("select * from business where name='Thai Thai Restaurant' and address='10890 S Eastern Ave, Ste 109';", \
+            "entries for the same Thai Thai Restaurant")
+
+fetchQuery("select * from business where name='Papa John\\'s Pizza' and address='5570 Camino Al Norte, Ste D2';", \
+            "entries for the same Papa John's")
 
 connection.close()
-
-
-
