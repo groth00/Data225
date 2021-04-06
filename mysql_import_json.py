@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Mar 30 19:25:57 2021
-
+Most recent edit on April 6 15:38 2021
 @author: groth
 """
 
@@ -10,25 +10,14 @@ import pandas as pd
 from mysql.connector import connect, Error
 from getpass import getpass
 
-b = pd.read_json('yelp_business_restaurants.json')
-flattened_col = pd.DataFrame(
-[(index, value) for (index, values) in b.categories.iteritems() \
- for value in values], columns=['index', 'categories']).set_index('index')
-temp = b.drop(['name', 'address', 'city', 'state', 'postal_code',
-               'latitude', 'longitude', 'stars', 'review_count',
-               'categories'], axis = 1).join(flattened_col)
-b = b.drop('categories', axis = 1)
+business_metadata = pd.read_json('yelp_business_restaurants.json')
+business_categories = pd.read_json('yelp_business_restaurants_categories.json')
 
-def width(df, attribute):
-    return max([len(x) for x in df[attribute]])
+def width(df, attributes):
+    return[max([len(x) for x in business_metadata[attr]]) for attr in attributes]
 
-widths = [width(b, 'business_id'),
-          width(b, 'name'),
-          width(b, 'address'),
-          width(b, 'city'),
-          width(b, 'state'),
-          width(b, 'postal_code'),]
-
+widths = width(business_metadata, ['business_id', 'name', 'address',
+                                   'city', 'state', 'postal_code'])
 try:
     connection = connect(host="localhost", 
                          user=input("Enter username: "),
@@ -40,11 +29,6 @@ try:
     with connection.cursor() as cursor:
         cursor.execute('drop database if exists yelp')
         cursor.execute('create database if not exists yelp')
-except Error as e:
-    print(e)
-
-try:
-    with connection.cursor() as cursor:
         cursor.execute('use yelp')
 except Error as e:
     print(e)
@@ -63,13 +47,6 @@ stars float(2,1),
 review_count int)
 '''.format(*widths)
 
-try:
-    with connection.cursor() as cursor:
-        cursor.execute(create_business_table)
-        connection.commit()
-except Error as e:
-    print('error creating business table: ', e)
-
 create_categories_table = '''
 create table categories(
 id integer auto_increment primary key,
@@ -77,14 +54,56 @@ business_id char({}),
 category varchar({}),
 foreign key(business_id) references business(business_id)
 )
-'''.format(widths[0], max([len(x) for x in flattened_col.categories]))
+'''.format(widths[0], max([len(x) for x in business_categories.categories]))
+
+create_user_table = '''
+create table user(
+user_id varchar(22) primary key,
+name varchar(30),
+review_count integer,
+yelping_since datetime,
+useful integer,
+funny integer,
+cool integer,
+fans integer,
+average_stars float(3, 2),
+compliment_hot integer,
+compliment_more integer,
+compliment_profile integer,
+compliment_cute integer,
+compliment_list integer,
+compliment_note integer,
+compliment_plain integer,
+compliment_cool integer,
+compliment_funny integer,
+compliment_writer integer,
+compliment_photos integer)
+'''
+
+create_review_table = '''
+create table review(
+review_id varchar(22) primary key,
+user_id varchar(22),
+business_id varchar(22),
+stars integer,
+date_of datetime,
+useful int,
+funny int,
+cool int,
+foreign key(user_id) references user(user_id),
+foreign key(business_id) references business(business_id))
+'''
 
 try:
     with connection.cursor() as cursor:
+        cursor.execute(create_business_table)
         cursor.execute(create_categories_table)
+        cursor.execute(create_user_table)
+        cursor.execute(create_review_table)
         connection.commit()
 except Error as e:
-    print('error creating categories table: ', e)
+    print('error creating a table: ', e)
+
     
 # show tables
 try:
@@ -101,8 +120,8 @@ except Error as e:
 ########### Load data into tables ##############
 ################################################
 
-business_values = [row for row in b.itertuples(index=False, name=None)]
-category_values = [row for row in temp.itertuples(index=False, name=None)]
+business_values = list(business_metadata.itertuples(index=False, name=None))
+category_values = list(business_categories.itertuples(index=False, name=None))
 
 insert_into_business = '''
 insert into business
@@ -132,65 +151,13 @@ except Error as e:
     
 
 # check that all rows were entered: 63944 and 274306
+select_statements = '''
+select count(*) from business;
+select count(*) from categories;
+'''
 with connection.cursor() as cursor:
-    cursor.execute('select count(*) from business')
-    result = cursor.fetchall()
-    for r in result:
-        print(f'There are {r} rows in table: business')
-        
-with connection.cursor() as cursor:
-    cursor.execute('select count(*) from categories')
-    result = cursor.fetchall()
-    for r in result:
-        print(f'There are {r} rows in table: categories')
-
-################################################
-################### Analysis ###################
-################################################
-
-def fetchQuery(query: str, description: str = "no description") -> None:
-    print(description)
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-        result = cursor.fetchall()
-        for r in result:
-            print(r)
-    print()
-
-# some queries
-businesses_per_state = '''
-select state, count(*) as num_restaurants
-from business
-group by state
-order by num_restaurants desc;
-'''
-fetchQuery(businesses_per_state, "businesses_per_state")
-
-avg_stars_query = '''
-select category, avg(stars)
-from business join categories using(business_id)
-group by category
-having count(*) > 50
-'''
-fetchQuery(avg_stars_query, "groups businesses by category and returns avg star rating for group size > 50")
-
-top_20 = '''
-select * from business order by stars DESC limit 20;
-'''
-fetchQuery(top_20, "top 20 businesses ranked by stars")
-
-bottom_20 = '''
-select * from business order by stars limit 20;
-'''
-fetchQuery(bottom_20, "bottom 20 businesses ranked by stars")
-
-fetchQuery("select name, address,count(*) as cnt from business group by name, address having cnt > 2 order by cnt DESC", \
-            "businesses that have more than one row for the same name and address")
-
-fetchQuery("select * from business where name='Thai Thai Restaurant' and address='10890 S Eastern Ave, Ste 109';", \
-            "entries for the same Thai Thai Restaurant")
-
-fetchQuery("select * from business where name='Papa John\\'s Pizza' and address='5570 Camino Al Norte, Ste D2';", \
-            "entries for the same Papa John's")
+    for cur in cursor.execute(select_statements, multi=True):
+        if cur.with_rows:
+            print(cur.fetchall())
 
 connection.close()
