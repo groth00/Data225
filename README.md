@@ -17,7 +17,8 @@ Data preprocessing/cleaning
 
 Business metadata imported into MySQL using MySQL Connector
 
-Analytical queries run against the database
+Used SQL queries for exploratory data analysis
 
+Used Spark NLP and the aspect-based sentiment analysis pipeline to annotate review text
 
-TODO: ETL, Data warehousing, Import into NoSQL database
+TODO: ETL (Data Fusion) & Data Warehousing (BigQuery) using Google Cloud Platform, Analytic SQL using BigQuery
