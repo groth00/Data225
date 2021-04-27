@@ -1,0 +1,476 @@
+{
+    "artifact": {
+        "name": "cdap-data-pipeline",
+        "version": "6.4.0",
+        "scope": "SYSTEM",
+        "label": "Data Pipeline - Batch"
+    },
+    "description": "etl for yelp",
+    "name": "yelpETL",
+    "config": {
+        "resources": {
+            "memoryMB": 2048,
+            "virtualCores": 1
+        },
+        "driverResources": {
+            "memoryMB": 2048,
+            "virtualCores": 1
+        },
+        "connections": [
+            {
+                "from": "csvfiles",
+                "to": "business"
+            },
+            {
+                "from": "business",
+                "to": "writebusiness"
+            },
+            {
+                "from": "csvfiles",
+                "to": "review"
+            },
+            {
+                "from": "review",
+                "to": "writereview"
+            },
+            {
+                "from": "csvfiles",
+                "to": "user"
+            },
+            {
+                "from": "user",
+                "to": "writeuser"
+            },
+            {
+                "from": "csvfiles",
+                "to": "annotated"
+            },
+            {
+                "from": "annotated",
+                "to": "writeannotation"
+            },
+            {
+                "from": "csvfiles",
+                "to": "categories"
+            },
+            {
+                "from": "categories",
+                "to": "writecategories"
+            }
+        ],
+        "comments": [],
+        "postActions": [],
+        "properties": {},
+        "processTimingEnabled": true,
+        "stageLoggingEnabled": false,
+        "stages": [
+            {
+                "name": "csvfiles",
+                "plugin": {
+                    "name": "GCSFile",
+                    "type": "batchsource",
+                    "label": "csvfiles",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "files",
+                        "project": "gentle-operator-311903",
+                        "path": "gs://groth-yelp/",
+                        "format": "text",
+                        "sampleSize": "100",
+                        "skipHeader": "false",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "pathField": "filename",
+                        "filenameOnly": "true",
+                        "recursive": "true",
+                        "encrypted": "false",
+                        "fileEncoding": "UTF-8",
+                        "copyHeader": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "csvfiles"
+            },
+            {
+                "name": "business",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "business",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.4.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "field": "*",
+                        "precondition": "filename != \"yelp_restaurants.csv\"",
+                        "directives": "parse-as-csv :body ',' true\ndrop :body",
+                        "on-error": "skip-error",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"address\",\"type\":[\"string\",\"null\"]},{\"name\":\"city\",\"type\":[\"string\",\"null\"]},{\"name\":\"state\",\"type\":[\"string\",\"null\"]},{\"name\":\"postal_code\",\"type\":[\"string\",\"null\"]},{\"name\":\"latitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"longitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"is_open\",\"type\":[\"int\",\"null\"]}]}",
+                        "workspaceId": "41a0ac99-70bd-473c-a8ca-8b921f466a3c"
+                    }
+                },
+                "outputSchema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"address\",\"type\":[\"string\",\"null\"]},{\"name\":\"city\",\"type\":[\"string\",\"null\"]},{\"name\":\"state\",\"type\":[\"string\",\"null\"]},{\"name\":\"postal_code\",\"type\":[\"string\",\"null\"]},{\"name\":\"latitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"longitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"is_open\",\"type\":[\"int\",\"null\"]}]}",
+                "inputSchema": [
+                    {
+                        "name": "csvfiles",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "business"
+            },
+            {
+                "name": "writebusiness",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "writebusiness",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "businessbq",
+                        "project": "auto-detect",
+                        "datasetProject": "gentle-operator-311903",
+                        "dataset": "yelp_bq",
+                        "table": "business",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitioningType": "TIME",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"address\",\"type\":[\"string\",\"null\"]},{\"name\":\"city\",\"type\":[\"string\",\"null\"]},{\"name\":\"state\",\"type\":[\"string\",\"null\"]},{\"name\":\"postal_code\",\"type\":[\"string\",\"null\"]},{\"name\":\"latitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"longitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"is_open\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                },
+                "outputSchema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"address\",\"type\":[\"string\",\"null\"]},{\"name\":\"city\",\"type\":[\"string\",\"null\"]},{\"name\":\"state\",\"type\":[\"string\",\"null\"]},{\"name\":\"postal_code\",\"type\":[\"string\",\"null\"]},{\"name\":\"latitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"longitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"is_open\",\"type\":[\"int\",\"null\"]}]}",
+                "inputSchema": [
+                    {
+                        "name": "Wrangler",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"address\",\"type\":[\"string\",\"null\"]},{\"name\":\"city\",\"type\":[\"string\",\"null\"]},{\"name\":\"state\",\"type\":[\"string\",\"null\"]},{\"name\":\"postal_code\",\"type\":[\"string\",\"null\"]},{\"name\":\"latitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"longitude\",\"type\":[\"float\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"is_open\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                ],
+                "id": "writebusiness"
+            },
+            {
+                "name": "review",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "review",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.4.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "field": "*",
+                        "precondition": "filename != \"yelp_reviews_notext.csv\"",
+                        "directives": "parse-as-csv :body ',' true\ndrop :body",
+                        "on-error": "skip-error",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"review_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"date\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]}]}",
+                        "workspaceId": "48f99d60-cbd5-4b46-9419-c6778bf2198e"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"review_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"date\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "csvfiles",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "review"
+            },
+            {
+                "name": "writereview",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "writereview",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "reviewbq",
+                        "project": "auto-detect",
+                        "datasetProject": "gentle-operator-311903",
+                        "dataset": "yelp_bq",
+                        "table": "review",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitioningType": "TIME",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"name\":\"etlSchemaBody\",\"type\":\"record\",\"fields\":[{\"name\":\"review_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"date\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]}]}"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"name\":\"etlSchemaBody\",\"type\":\"record\",\"fields\":[{\"name\":\"review_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"date\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "review",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"review_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"date\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]}]}"
+                    }
+                ],
+                "id": "writereview"
+            },
+            {
+                "name": "user",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "user",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.4.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "field": "*",
+                        "precondition": "false",
+                        "directives": "parse-as-csv :body ',' true\ndrop :body",
+                        "on-error": "skip-error",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"yelping_since\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"fans\",\"type\":[\"int\",\"null\"]},{\"name\":\"average_stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"compliment_hot\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_more\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_profile\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cute\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_list\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_note\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_plain\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_writer\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_photos\",\"type\":[\"int\",\"null\"]}]}",
+                        "workspaceId": "e3b4c502-7302-441c-9808-0d8ac03065ac"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"yelping_since\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"fans\",\"type\":[\"int\",\"null\"]},{\"name\":\"average_stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"compliment_hot\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_more\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_profile\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cute\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_list\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_note\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_plain\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_writer\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_photos\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "csvfiles",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "user"
+            },
+            {
+                "name": "writeuser",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "writeuser",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "userbq",
+                        "project": "auto-detect",
+                        "datasetProject": "gentle-operator-311903",
+                        "dataset": "yelp_bq",
+                        "table": "user",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitioningType": "TIME",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"name\":\"etlSchemaBody\",\"type\":\"record\",\"fields\":[{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"yelping_since\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"fans\",\"type\":[\"int\",\"null\"]},{\"name\":\"average_stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"compliment_hot\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_more\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_profile\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cute\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_list\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_note\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_plain\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_writer\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_photos\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"name\":\"etlSchemaBody\",\"type\":\"record\",\"fields\":[{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"yelping_since\",\"type\":[{\"type\":\"string\",\"logicalType\":\"datetime\"},\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"fans\",\"type\":[\"int\",\"null\"]},{\"name\":\"average_stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"compliment_hot\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_more\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_profile\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cute\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_list\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_note\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_plain\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_writer\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_photos\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "user",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"user_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"name\",\"type\":[\"string\",\"null\"]},{\"name\":\"review_count\",\"type\":[\"int\",\"null\"]},{\"name\":\"yelping_since\",\"type\":[\"string\",\"null\"]},{\"name\":\"useful\",\"type\":[\"int\",\"null\"]},{\"name\":\"funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"fans\",\"type\":[\"int\",\"null\"]},{\"name\":\"average_stars\",\"type\":[\"float\",\"null\"]},{\"name\":\"compliment_hot\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_more\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_profile\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cute\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_list\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_note\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_plain\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_cool\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_funny\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_writer\",\"type\":[\"int\",\"null\"]},{\"name\":\"compliment_photos\",\"type\":[\"int\",\"null\"]}]}"
+                    }
+                ],
+                "id": "writeuser"
+            },
+            {
+                "name": "annotated",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "annotated",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.4.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "field": "*",
+                        "precondition": "filename != \"annotated_reviews.csv\"",
+                        "directives": "parse-as-csv :body ',' true\ndrop :body_1,body\nfilter-rows-on regex-match body_2 ^0$\nset columns business_id,annotation,sentiment",
+                        "on-error": "skip-error",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"annotation\",\"type\":[\"string\",\"null\"]},{\"name\":\"sentiment\",\"type\":[\"string\",\"null\"]}]}",
+                        "workspaceId": "2e8c9ea6-0f02-4557-8830-32d05508d1bc"
+                    }
+                },
+                "outputSchema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"annotation\",\"type\":[\"string\",\"null\"]},{\"name\":\"sentiment\",\"type\":[\"string\",\"null\"]}]}",
+                "inputSchema": [
+                    {
+                        "name": "csvfiles",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "annotated"
+            },
+            {
+                "name": "writeannotation",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "writeannotation",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "annotationbq",
+                        "project": "auto-detect",
+                        "datasetProject": "gentle-operator-311903",
+                        "dataset": "yelp_bq",
+                        "table": "annotation",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitioningType": "TIME",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"annotation\",\"type\":[\"string\",\"null\"]},{\"name\":\"sentiment\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                },
+                "outputSchema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"annotation\",\"type\":[\"string\",\"null\"]},{\"name\":\"sentiment\",\"type\":[\"string\",\"null\"]}]}",
+                "inputSchema": [
+                    {
+                        "name": "annotated",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"annotation\",\"type\":[\"string\",\"null\"]},{\"name\":\"sentiment\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                ],
+                "id": "writeannotation"
+            },
+            {
+                "name": "categories",
+                "plugin": {
+                    "name": "Wrangler",
+                    "type": "transform",
+                    "label": "categories",
+                    "artifact": {
+                        "name": "wrangler-transform",
+                        "version": "4.4.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "field": "*",
+                        "precondition": "filename != \"yelp_restaurants_categories.csv\"",
+                        "directives": "parse-as-csv :body ',' true\ndrop :body",
+                        "on-error": "skip-error",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"categories\",\"type\":[\"string\",\"null\"]}]}",
+                        "workspaceId": "771507c4-377e-438a-ac8c-259124e74428"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"categories\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "csvfiles",
+                        "schema": "{\"type\":\"record\",\"name\":\"etlSchemaBody\",\"fields\":[{\"name\":\"offset\",\"type\":\"long\"},{\"name\":\"body\",\"type\":\"string\"},{\"name\":\"filename\",\"type\":\"string\"}]}"
+                    }
+                ],
+                "id": "categories"
+            },
+            {
+                "name": "writecategories",
+                "plugin": {
+                    "name": "BigQueryTable",
+                    "type": "batchsink",
+                    "label": "writecategories",
+                    "artifact": {
+                        "name": "google-cloud",
+                        "version": "0.17.0",
+                        "scope": "SYSTEM"
+                    },
+                    "properties": {
+                        "referenceName": "categoriesbq",
+                        "project": "auto-detect",
+                        "datasetProject": "gentle-operator-311903",
+                        "dataset": "yelp_bq",
+                        "table": "categories",
+                        "serviceAccountType": "filePath",
+                        "serviceFilePath": "auto-detect",
+                        "operation": "insert",
+                        "truncateTable": "false",
+                        "allowSchemaRelaxation": "false",
+                        "location": "US",
+                        "createPartitionedTable": "false",
+                        "partitioningType": "TIME",
+                        "partitionFilterRequired": "false",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"categories\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                },
+                "outputSchema": [
+                    {
+                        "name": "etlSchemaBody",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"categories\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                ],
+                "inputSchema": [
+                    {
+                        "name": "categories",
+                        "schema": "{\"type\":\"record\",\"name\":\"avroSchema\",\"fields\":[{\"name\":\"business_id\",\"type\":[\"string\",\"null\"]},{\"name\":\"categories\",\"type\":[\"string\",\"null\"]}]}"
+                    }
+                ],
+                "id": "writecategories"
+            }
+        ],
+        "schedule": "0 * * * *",
+        "engine": "spark",
+        "numOfRecordsPreview": 100,
+        "description": "etl for yelp",
+        "maxConcurrentRuns": 1
+    }
+}
