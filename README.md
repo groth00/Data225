@@ -21,4 +21,8 @@ Used SQL queries for exploratory data analysis
 
 Used Spark NLP and the aspect-based sentiment analysis pipeline to annotate review text
 
-TODO: ETL (Data Fusion) & Data Warehousing (BigQuery) using Google Cloud Platform, Analytic SQL using BigQuery
+Performed ETL in Google Cloud (Google Cloud Storage -> Data Fusion -> BigQuery)
+
+Performed ETL in AWS (S3, Glue -> Redshift)
+
+Used BigQuery to run queries on the entire dataset (business, users, reviews) and generate visualizations using Data Studio
