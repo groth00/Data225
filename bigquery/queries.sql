@@ -15,16 +15,14 @@ JOIN (SELECT
     FROM  `united-helix-310720.yelp.reviews`
     Where EXTRACT(YEAR from date ) = 2019
     GROUP BY month, year) T11
-    USING(month)
-    
+    USING(month)    
 JOIN ( SELECT EXTRACT(MONTH from yelping_since ) month,
     EXTRACT(YEAR from yelping_since ) year,
     count(user_id) as registerNum    
     FROM  `united-helix-310720.yelp.users`
     Where EXTRACT(YEAR from yelping_since ) = 2020
     GROUP BY month, year) T2
-    USING(month)
-    
+    USING(month)    
 JOIN (SELECT 
     EXTRACT(MONTH from date ) month,
     EXTRACT(YEAR from date ) year,
@@ -33,7 +31,6 @@ JOIN (SELECT
     Where EXTRACT(YEAR from date ) = 2020
     GROUP BY month, year) T22
     USING(month)
-
 GROUP BY month,T1.year, T1.registerNum,T2.year, T2.registerNum , T11.reviewNum, T22.reviewNum  
 ORDER BY month;
 
@@ -43,8 +40,7 @@ FROM
     (select EXTRACT(HOUR from date) as hour,
     count( user_id ) TotalNum 
     from `united-helix-310720.yelp.reviews` 
-    group by hour) T
-    
+    group by hour) T    
  join (
       select EXTRACT(HOUR from date ) hour,
       sum( useful ) UsefulNum 
@@ -56,8 +52,7 @@ FROM
       sum( funny ) FunnyNum
       FROM  `united-helix-310720.yelp.reviews` 
       group by hour) 
-      using (hour)
-      
+      using (hour)      
  join (
       select EXTRACT(HOUR from date ) hour,
        sum( cool ) CoolNum
@@ -118,7 +113,7 @@ on t1.user_id = review.user_id
 join   `united-helix-310720.yelp.yelp-restaurants` rest
 on review.business_id = rest.business_id
 group by rest.city
-)t2 order by business_cnt desc limit 20
+)t2 order by business_cnt desc limit 20;
 
 -- top ten businesses with most reviews
 select review_count, name from `united-helix-310720.yelp.yelp-restaurants` 
